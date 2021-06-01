@@ -1,5 +1,7 @@
 from bokeh_server.OpenedFile.resource import OpenedFileResource
 from bokeh_server.RenderData.InfoResource import InfoResource
+from bokeh_server.RenderData.actions.ChangeClipping import ChangeClippingResource
+from bokeh_server.RenderData.actions.ChangeGainResource import ChangeGainResource
 from bokeh_server.RenderData.actions.FilteringResource import FilterEventResource, DisableFilterEventResource
 from bokeh_server.RenderData.actions.GodografEventsResource import ChangeGainEventResource, ChangeHeightEventResource, \
     ChangeTypeGodografEventResource
@@ -29,6 +31,8 @@ def create_application():
     app.add_route("/change_height", ChangeHeightEventResource())
     app.add_route("/change_type_godograf", ChangeTypeGodografEventResource())
     app.add_route("/info", InfoResource())
+    app.add_route("/set_clipping_value", ChangeClippingResource())
+    app.add_route("/set_new_gain", ChangeGainResource())
 
     # app.add_route("/open_files/{name:str}", OpenedFileItemResource)
     return app

@@ -37,14 +37,14 @@ class RenderDataUtils:
 
         vareas_mass = []
 
-        data = np.zeros((len(traces), len(traces[0])))
+        # data = np.zeros((len(traces), len(traces[0])))
         num_of_traces = len(traces)
-        for i in range(0, num_of_traces):  # self.num_of_traces):
-            data[i] = traces[i]
-            # if detrend == 1:
+        data = np.copy(traces)
         data = signal.detrend(data)
-
+        max_traces = -np.inf
         for i in range(num_of_traces):
+            if np.max(num_of_traces) > max_traces:
+                max_traces = np.max(num_of_traces)
             if normalization_type == "R^2":  # normalization_type == "None":
                 new_traces = data[i] * offsets[i] ** 2
             elif normalization_type == "STD":
@@ -56,6 +56,7 @@ class RenderDataUtils:
                     new_traces = data[i] * offsets[i]
             else:  # None
                 new_traces = data[i]
+
             traces_step1, time_step1 = cls.insert_zeros_in_trace(new_traces)
 
             traces_step11 = traces_step1
@@ -68,4 +69,6 @@ class RenderDataUtils:
                 time_mass.append(time_step1)
             vareas_mass.append(a)
 
+        # for trace in trace_mass:
+        #     trace /= max_traces
         return trace_mass, vareas_mass, time_mass

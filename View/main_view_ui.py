@@ -1,4 +1,6 @@
-from PyQt5.QtCore import Qt
+import requests
+from PyQt5.QtCore import Qt, QEvent
+from PyQt5.QtGui import QKeyEvent
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QMenuBar, QToolBar, QProgressDialog
 
 from Controller.Actions.AutomaticAction import AutomaticAllAction, AutomaticCurrentAction
@@ -18,11 +20,52 @@ from Model.TravelsTimeModel import TravelsTimeModel
 from View.BokehTab.BokehTabView import BokehTabView
 from View.SelectFilesView import SelectFileView
 from View.TravelsTime.TravelsTimeView import TravelTimesView
+from bokeh_server.settings import server_url, SliderConfig
 
 
 class BaseWidgetView(QWidget):
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.KeyPress:
+            key = QKeyEvent(event).key()
+            if Qt.Key_Up == key:
+                self.press_arrow_up_key()
+                return True
+            elif Qt.Key_Down == key:
+                self.press_arrow_down_key()
+                return True
+            elif Qt.Key_Minus == key:
+                self.press_minus_key()
+                return True
+            elif Qt.Key_Plus == key:
+                self.press_plus_key()
+                return True
+        return False
+
+    def press_plus_key(self):
+        current_value = self.wiggle_clipping.choose_type.slider.value()
+        self.wiggle_clipping.choose_type.slider.setValue(
+            current_value + SliderConfig.STEP.value * 10 if current_value < SliderConfig.MAX_VALUE.value else 0)
+        res = requests.get(server_url + "/change_gain",
+                           params={"type": "plus", "key": self._model.current_cell_name})
+
+    def press_minus_key(self):
+        current_value = self.wiggle_clipping.choose_type.slider.value()
+        self.wiggle_clipping.choose_type.slider.setValue(
+            current_value - SliderConfig.STEP.value * 10 if current_value > SliderConfig.MIN_VALUE.value else 0)
+        res = requests.get(server_url + "/change_gain",
+                           params={"type": "minus", "key": self._model.current_cell_name})
+
+    def press_arrow_up_key(self):
+        res = requests.get(server_url + "/change_height",
+                           params={"type": "up", "key": self._model.current_cell_name})
+
+    def press_arrow_down_key(self):
+        res = requests.get(server_url + "/change_height",
+                           params={"type": "down", "key": self._model.current_cell_name})
+
     def __init__(self, model, main_controller, parent):
         super().__init__(parent)
+        self.installEventFilter(self)
         self._parent = parent
         self._model = model
         self._main_controller = main_controller
@@ -43,19 +86,9 @@ class BaseWidgetView(QWidget):
         self._select_data_widget = SelectFileView(
             self._select_data_model, self._select_data_controller, self._bokeh_tab_view, self._travels_time_widget
         )
-        # self.__travels_time_widget = TravelTimesWidget(self.click_data, self.__bokeh_controller)
-        #
-        # self._select_items = SelectItemsLayout(self.__select_data_widget, self.__travels_time_widget)
+
         self.main_v_layout = QVBoxLayout()
         self.main_h_layout = QHBoxLayout()
-        # self.main_v_layout.addWidget(self.__generate_menu_bar())
-        # self.main_v_layout.addWidget(self.__generate_tool_bar())
-
-        # h_l = QVBoxLayout()
-        # h_l.addWidget(self.__select_data_widget, stretch=75)
-        # h_l.addWidget(
-        #     self.__travels_time_widget, stretch=40
-        # )
         v_box_layout = QVBoxLayout()
         v_box_layout.addWidget(self._select_data_widget)
         v_box_layout.addWidget(self._travels_time_widget)
@@ -88,11 +121,12 @@ class BaseWidgetView(QWidget):
         self.__main_menu_bar_automatic_nn = self.__main_menu_bar.addMenu("&Automatic with NN")
         self.__main_menu_bar_automatic_alg = self.__main_menu_bar.addMenu("&Automatic alg")
         self.__main_menu_bar_filtering.addAction(FilterAction(self, self._bokeh_controller))
-        self.__main_menu_bar_wig_clipp.addAction(WiggleClippingAction(self, self._bokeh_controller))
-        self.__main_menu_ba_normalize.addAction(NoneNormalizationAction(self, self._bokeh_controller))
-        self.__main_menu_ba_normalize.addAction(StdNormalizationAction(self, self._bokeh_controller))
-        self.__main_menu_ba_normalize.addAction(RNormalizationAction(self, self._bokeh_controller))
-        self.__main_menu_ba_normalize.addAction(R2NormalizationAction(self, self._bokeh_controller))
+        self.wiggle_clipping = WiggleClippingAction(self, self._bokeh_controller)
+        self.__main_menu_bar_wig_clipp.addAction(self.wiggle_clipping)
+        self.__main_menu_ba_normalize.addAction(NoneNormalizationAction(self, self.wiggle_clipping))
+        self.__main_menu_ba_normalize.addAction(StdNormalizationAction(self, self.wiggle_clipping))
+        self.__main_menu_ba_normalize.addAction(RNormalizationAction(self, self.wiggle_clipping))
+        self.__main_menu_ba_normalize.addAction(R2NormalizationAction(self, self.wiggle_clipping))
         self.__main_menu_bar_automatic_alg.addAction(
             AutomaticAlgoritmsAction(self, self._bokeh_controller, self._travels_time_widget))
         self.__main_menu_bar_automatic_nn.addAction(

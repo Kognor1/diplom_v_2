@@ -25,12 +25,12 @@ class BokehTabWidget(QWidget):
         )
         self.browser = QWebEngineView()
         self.browser.setZoomFactor(0.84)
-        self.browser.setContextMenuPolicy(Qt.NoContextMenu)
+        # self.browser.setContextMenuPolicy(Qt.NoContextMenu)
         self.dev = QWebEngineView()
         self.path = path
         self.name = name_tab
         self.hBox.addWidget(self.browser, stretch=95)
-        # self.hBox.addWidget(self.dev, stretch=20)
+        self.hBox.addWidget(self.dev, stretch=20)
         self.hBox.addWidget(self.__info_data_label, stretch=5)
         # self.hBox.addWidget(self.test, stretch=20)
         self.vbox.addLayout(self.hBox)

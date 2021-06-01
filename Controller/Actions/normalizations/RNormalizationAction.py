@@ -12,14 +12,16 @@ from bokeh_server.settings import server_url
 
 class RNormalizationAction(QAction):
 
-    def __init__(self, parent, bokeh_tab_controller):
+    def __init__(self, parent, wiggle_clipping):
         super().__init__("&R", parent)
         self._type = "R"
+        self.wiggle_clippping = wiggle_clipping
         self.setStatusTip("Open Normalization settings")
 
         self.triggered.connect(self.set_normalization)
 
     def set_normalization(self):
+        self.wiggle_clippping.choose_type.slider.setValue(1.0)
         res = requests.get(server_url + "/set_normalization", params={"type": self._type})
         return res.json()
         # self.bokeh_tab_controller.bokeh_html.normalization_plot_unlock(

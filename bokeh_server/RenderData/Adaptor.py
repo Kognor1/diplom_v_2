@@ -11,7 +11,7 @@ from bokeh.layouts import column
 from bokeh.models import (
     ColumnDataSource,
     Line,
-    Circle,
+    Cross,
     Slider,
     CheckboxButtonGroup,
     MultiLine,
@@ -22,6 +22,7 @@ from bokeh.models import (
     Div,
 )
 from bokeh.plotting import figure, Figure
+from scipy.signal import filtfilt
 
 from bokeh_server.nn_utils.utils import custom_loss1, custom_metric
 from bokeh_server.JsCode.js_code import clipping_code
@@ -43,6 +44,7 @@ class BokehAdaptor:
         from bokeh_server.RenderData.Controller import BokehSegyFile
 
         self._bokeh_data = BokehSegyFile(file)
+        self.clipping_value = ColumnDataSource(data=dict(clipping_value=[0.45]))
         self.energy_source = self._bokeh_data.energy_source_point
         self.is_control = False
         self.godograf_settings = GodografSettings()
@@ -55,9 +57,10 @@ class BokehAdaptor:
         self.lines = {}
         self.current_line: Optional[Line] = None
         self.circles = {}
-        self.current_circle: Optional[Circle] = None
+        self.current_circle: Optional[Cross] = None
         self.new_vareas = []  # filter
         self.trace_mass = []  # filter
+        self.current_normalization = "STD"
 
     def add_godograf(self, name, godograf):
         self._godografs[name] = godograf
@@ -66,6 +69,27 @@ class BokehAdaptor:
         for i in self._godografs:
             if not i.fixed:
                 i.set_visible(False)
+
+    @without_document_lock
+    def update_clipping_value_lock(self, current_file_name, new_clipping_value):
+        doc = self.godograf_settings.docs[current_file_name]
+        doc.add_next_tick_callback(
+            partial(self.update_clipping_value, new_clipping_value)
+        )
+
+    def update_clipping_value(self, new_clipping_value):
+        self.clipping_value.data = {
+            "clipping_value": [new_clipping_value]}
+
+    @without_document_lock
+    def update_gain_value_lock(self, current_file_name, new_gain_value):
+        doc = self.godograf_settings.docs[current_file_name]
+        doc.add_next_tick_callback(
+            partial(self.update_gain_value, new_gain_value)
+        )
+
+    def update_gain_value(self, new_gain_value):
+        self.gain_slider.value = new_gain_value
 
     @without_document_lock
     def create_godograf_source_unlock(self, type_godograf, current_file_name, travels_time_name, model_path=None):
@@ -94,12 +118,14 @@ class BokehAdaptor:
         doc.add_next_tick_callback(self.disable_filter)
 
     def disable_filter(self):
-        self._bokeh_data.update_source_copy_p(
-            self._bokeh_data.vareas_mass, self._bokeh_data.time_mass, self._bokeh_data.Num_of_traces
-        )
-        self._bokeh_data.update_source_copy_l(
-            self._bokeh_data.trace_mass, self._bokeh_data.time_mass, self._bokeh_data.Num_of_traces
-        )
+        self._bokeh_data.traces = self._bokeh_data.original_traces
+        self.normalization_plot(self.current_normalization, traces=self.bokeh_data.original_traces, patch=False)
+        # self._bokeh_data.update_source_copy_p(
+        #     self._bokeh_data.vareas_mass, self._bokeh_data.time_mass, self._bokeh_data.Num_of_traces
+        # )
+        # self._bokeh_data.update_source_copy_l(
+        #     self._bokeh_data.trace_mass, self._bokeh_data.time_mass, self._bokeh_data.Num_of_traces
+        # )
 
     @without_document_lock
     def filter_plot_unlock(self, current_file_name, value, type_filter, order=4):
@@ -109,42 +135,32 @@ class BokehAdaptor:
         )
 
     def filter_plot(self, type_filter, value, order=4):
-        if not self.new_vareas:
-            self.new_vareas = self._bokeh_data.vareas_mass
-            self.trace_mass = self._bokeh_data.trace_mass
-        new_vareas = []
-        trace_mass = []
-        for i in self.new_vareas:
-            y = self._bokeh_data.butter_bandpass_filter(
-                i, value=value, type_filter=type_filter, fs=1 / self._bokeh_data.dt, order=order
-            )
-            new_vareas.append(y)
-        for i in self.trace_mass:
-            y = self._bokeh_data.butter_bandpass_filter(
-                i, value=value, type_filter=type_filter, fs=1 / self._bokeh_data.dt, order=order
-            )
-            trace_mass.append(y)
+        new_traces = []
+        b, a = self._bokeh_data.butter_bandpass_filter(value=value, type_filter=type_filter, fs=1 / self._bokeh_data.dt,
+                                                       order=order)
+        for trace in self._bokeh_data.traces:
+            y = filtfilt(b, a, trace)
+            new_traces.append(y)
+        self._bokeh_data.traces = np.asarray(new_traces)
+        self.normalization_plot(self.current_normalization, traces=np.asarray(new_traces), patch=False)
 
-        self.new_vareas = new_vareas
-        self.trace_mass = trace_mass
-        self._bokeh_data.update_source_copy_p(
-            self.new_vareas, self._bokeh_data.time_mass, self._bokeh_data.Num_of_traces
-        )
-        self._bokeh_data.update_source_copy_l(
-            self.new_vareas, self._bokeh_data.time_mass, self._bokeh_data.Num_of_traces
-        )
-
-    def normalization_plot(self, normalization_type):
-        _, vareas_mass, time_mass = RenderDataUtils.normalization(
-            traces=self.bokeh_data.traces,
+    def normalization_plot(self, normalization_type, traces=None, patch=True):
+        self.current_normalization = normalization_type
+        if traces is None:
+            traces = self.bokeh_data.traces
+        traces_mass, vareas_mass, time_mass = RenderDataUtils.normalization(
+            traces=traces,
             time_mass=self.bokeh_data.time_mass,
             sp=self.bokeh_data.sp,
             offsets=self._bokeh_data.offsets,
             dr=self._bokeh_data.dr,
             normalization_type=normalization_type,
-            patch=True,
+            patch=patch,
         )
         self._bokeh_data.update_source_copy_p(vareas_mass, time_mass, self._bokeh_data.Num_of_traces)
+        self._bokeh_data.update_source_copy_l(traces_mass, time_mass, self._bokeh_data.Num_of_traces)
+        # self._bokeh_data.update_source_copy_l(vareas_mass, time_mass, self._bokeh_data.Num_of_traces)
+        self.gain_slider.value = 1.0
 
     @without_document_lock
     def change_godograf_unlock(self, current_file_name, travels_time_name):
@@ -225,8 +241,8 @@ class BokehAdaptor:
         self.godograf_settings.create_or_choise_part_godograf(name=travels_name, f_name=f_name)
         self.godograf_current_type[travels_name] = {"type": type_godograf, "meta": None}
         source_points = ColumnDataSource(data=dict(x=[], y=[], color=["blue"]))
-        circle = self.plot.circle(source=source_points, x="x", y="y", color="color", radius=1.0)
-        line: Line = self.plot.line(source=source_points, x="x", y="y", line_width=4, line_alpha=0.3, line_color="blue")
+        circle = self.plot.asterisk(source=source_points, x="x", y="y", color="color", size=13, line_width=1.5)
+        line: Line = self.plot.line(source=source_points, x="x", y="y", line_width=4, line_alpha=0.3, line_color="red")
         # if self._godograf_settings.current_travels_name == None:
         #
         if (
@@ -244,7 +260,7 @@ class BokehAdaptor:
                 self.change_godografs(self.godograf_settings.current_travels_name, type_godograf)
             else:
                 self.current_source_points: ColumnDataSource = source_points
-                self.current_circle: Circle = circle
+                self.current_circle: Cross = circle
                 self.current_line: Line = line
         else:
             self.change_godografs(travels_name, type_godograf)  # self._godograf_settings.current_travels_name
@@ -320,23 +336,32 @@ class BokehAdaptor:
             color.append(self.godograf_settings.get_current_godograf().current_color)
         return sorted(zip(x_coord, y_coord, color), key=lambda x_cord: x_cord[0])
 
-    def update_semi_automatic_points(self, new_coord, new_x, new_y, type_semi="MAX", window=10):
-        x_coord, y_coord, color = map(list, zip(*new_coord))
-        if len(x_coord) == 1:
-            self.update_manual_points(x_coord, y_coord, color)
+    def update_semi_automatic_points(self, x_coord, y_coord, color, new_x, new_y, type_semi="MAX", window=10):
+        if len(x_coord) == 0:
+            new_coord = self.put_point(new_x, new_y)
+            self.update_manual_points_rolled(new_coord)
             return
-
-        x1 = int(x_coord[0] / self._bokeh_data.step)
-        y1 = int(y_coord[0])
+        # if len(x_coord) == 1:
+        #     new_coord = self.put_point(new_x, new_y)
+        #     self.update_manual_points_rolled(new_coord)
+        #     return
+        if new_x >= x_coord[-1]:
+            x1 = int(x_coord[-1] / self._bokeh_data.step)
+            y1 = int(y_coord[-1])
+        elif new_x <= x_coord[0]:
+            x1 = int(x_coord[0] / self._bokeh_data.step)
+            y1 = int(y_coord[0])
+        else:
+            return
         x2 = int(new_x / self._bokeh_data.step)
         y2 = int(new_y)
         window = window
-        k = (y1 - y2) / (x1 - x2)
+        if x1 - x2 == 0:
+            k = 0
+        else:
+            k = (y1 - y2) / (x1 - x2)
         b = y2 - k * x2
         work_traces = self._bokeh_data.source_l.data["xs"][x1:x2]
-        x_coord = []
-        y_coord = []
-        color = []
         for index, trace in enumerate(work_traces):
             new_y = index * k + b
             start_window = int(new_y - window)
@@ -495,15 +520,17 @@ class BokehAdaptor:
                 self.godograf_current_type[self.godograf_settings.current_travels_name]["type"]
                 == GodografType.SemiAutomatic
         ):
-            new_coord = self.put_point(event.x, event.y)
             window = int(self.godograf_current_type[self.godograf_settings.current_travels_name]["window"])
             type_semi = self.godograf_current_type[self.godograf_settings.current_travels_name]["meta"]
             self.update_semi_automatic_points(
-                new_coord=new_coord, new_x=event.x, new_y=event.y, type_semi=type_semi, window=window
+                x_coord=self.current_source_points.data["x"],
+                y_coord=self.current_source_points.data["y"],
+                color=self.current_source_points.data["color"],
+                new_x=event.x, new_y=event.y, type_semi=type_semi, window=window
             )
 
     def mouse_callback(self, event):
-        event.x = self.get_lines_coord(event.x)
+        # event.x = self.get_lines_coord(event.x)
         self.rec_x = event.x
 
     def render(self):
@@ -523,6 +550,7 @@ class BokehAdaptor:
             title="Gain",
             default_size=SliderConfig.DEFAULT_SIZE.value,
         )
+        self.gain_slider.visible = False
         checkbox_button_group = CheckboxButtonGroup(
             name="checkbox_button_group", labels=["Wiggle", "Clipping"], active=[0, 0, 0], default_size=50
         )
@@ -530,14 +558,15 @@ class BokehAdaptor:
         # полоски
         self.plot.on_event(Tap, self.create_point_callback)
         self.plot.on_event(DoubleTap, self.delete_point_callback)
-        self.plot.on_event(MouseMove, self.mouse_callback)
+        # self.plot.on_event(MouseMove, self.mouse_callback)
         self.plot.add_glyph(self._bokeh_data.source_l, multi_line)
         patches = Patches(xs="xs", ys="ys", fill_color="black", line_alpha=0.1)  # закраска
         self.plot.add_glyph(self._bokeh_data.source_p, patches)
 
         callback = CustomJS(
             args=dict(
-                c=self._bokeh_data.step,
+                c=self.bokeh_data.step,
+                clipping_value=self.clipping_value,
                 source_l=self._bokeh_data.source_l,
                 source_copy_l=self._bokeh_data.source_copy_l,
                 source_p=self._bokeh_data.source_p,

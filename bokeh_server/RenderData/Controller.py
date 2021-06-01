@@ -24,6 +24,7 @@ class BokehSegyFile:
         self.segy_reader.open(self.file)
 
         self.traces, self.bin_head, self.trace_head = self.segy_reader.read_all()
+        self.original_traces = self.traces
         try:
             self.energy_source_point = self.trace_head["EnergySourcePoint"][0]
         except Exception as e:
@@ -55,14 +56,12 @@ class BokehSegyFile:
         b, a = butter(order, high, btype='high', analog=False)
         return b, a
 
-    def butter_bandpass_filter(self, data, value, type_filter, fs, order=5):
-        if type_filter == FilterType:
+    def butter_bandpass_filter(self, value, type_filter, fs, order=5):
+        if type_filter == FilterType.low:
             b, a = self.butter_low(value, fs, order=order)
-            y = filtfilt(b, a, data)
         else:
             b, a = self.butter_high(value, fs, order=order)
-            y = filtfilt(b, a, data)
-        return y
+        return b, a
 
     def insert_zeros_in_trace(self, trace):
         time = np.arange(len(trace))
@@ -145,15 +144,17 @@ class BokehSegyFile:
         )
 
     def update_source_copy_p(self, vareas_mass, time_mass, num_of_traces):
+
         self.source_copy_p.data = {
-            "xs": [vareas_mass[i] + self.step * i for i in range(num_of_traces)],
-            "ys": [time_mass[i] for i in range(num_of_traces)],
+            "xs": np.array([vareas_mass[i] + self.step * i for i in range(num_of_traces)]),
+            "ys": np.array([time_mass[i] for i in range(num_of_traces)]),
         }
 
     def update_source_copy_l(self, trace_mass, time_mass, num_of_traces):
+        a = np.array([trace_mass[i] + self.step * i for i in range(self.Num_of_traces)])
         self.source_copy_l.data = {
-            "xs": [trace_mass[i] + self.step * i for i in range(self.Num_of_traces)],
-            "ys": [time_mass[i] for i in range(num_of_traces)],
+            "xs": np.array([trace_mass[i] + self.step * i for i in range(self.Num_of_traces)]),
+            "ys": np.array([time_mass[i] for i in range(num_of_traces)]),
         }
 
 

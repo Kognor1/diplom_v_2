@@ -29,9 +29,10 @@ def display_event(self, attributes=[]):
 
 
 clipping_code = """
-                var clip = c-0.1;
+                var clip = clipping_value.data["clipping_value"][0];
                 var paint = !!checkbox_button_group.active.includes(0);
-                console.log(paint)
+                console.log(clip)
+                clipping_value.change.emit();
                 var clipping = !!checkbox_button_group.active.includes(1);
                 var data_L = source_l.data;
                 var data_copy_L = source_copy_l.data;

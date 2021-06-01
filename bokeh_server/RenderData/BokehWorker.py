@@ -55,7 +55,7 @@ class BokehWorker(threading.Thread):
         extra.append(("/jquery-3.6.0.min.js", JqueryHandler))
 
         self.server = Server(
-            apps, io_loop=IOLoop(), port=bokeh_port, extra_patterns=extra, allow_websocket_origin=["*"]
+            apps, port=bokeh_port, io_loop=IOLoop(), extra_patterns=extra, allow_websocket_origin=["*"]
         )
         self.server.start()
         self.server.io_loop.start()

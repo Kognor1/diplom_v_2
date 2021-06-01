@@ -34,7 +34,7 @@ class ChangeTypeGodografEventResource:
         godograf_name = req.params["godograf_name"]
         godograf_type = req.params["godograf_type"]
         type_semi_automatic = req.params["type_semi_automatic"] if "type_semi_automatic" in req.params else None
-        window = req.params["window"]
+        window = req.params["window"] if "window" in req.params else None
         for key, value in b_conroller.open_main_data_widgets.items():
             b_conroller.open_main_data_widgets[key].bokeh_html.godograf_current_type[godograf_name] = {
                 "type": godograf_type,
