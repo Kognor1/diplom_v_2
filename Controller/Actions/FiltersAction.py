@@ -118,7 +118,7 @@ class SettingsPlotWidget(QWidget):
                                params={"type": FilterType.high, "order": order, "value": high})
         else:
             res = requests.get(server_url + "/disable_filter", )
-            self.hight_pass_checkbox.setChecked(False)
+            self.low_pass_checkbox.setChecked(False)
 
     def create_low_pass_filter(self):
         low_pass_block = QVBoxLayout()

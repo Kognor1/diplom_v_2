@@ -6,12 +6,14 @@ from bokeh_server.RenderData.actions.FilteringResource import FilterEventResourc
 from bokeh_server.RenderData.actions.GodografEventsResource import ChangeGainEventResource, ChangeHeightEventResource, \
     ChangeTypeGodografEventResource
 from bokeh_server.RenderData.actions.NormalizationResource import NormalizationEventResource
+from bokeh_server.RenderData.actions.UndoAction import UndoActionResource
 from bokeh_server.RenderData.godografs.GodografResource import (
     StartGodografEventResource,
     EndGodografEventResource,
-    ChangeGodografEventResource, DownloadGodografEventResource, LoadGodografResource,
+    ChangeGodografEventResource, DownloadGodografEventResource, LoadGodografResource, StartGodografItemEventResource,
 )
 from bokeh_server.RenderData.resource import RenderDataResource
+from bokeh_server.utils.busy_godograf_resource import BusyGodografResource
 
 
 def create_application():
@@ -20,6 +22,7 @@ def create_application():
     app.add_route("/open_files", OpenedFileResource())
     app.add_route("/render_data", RenderDataResource())
     app.add_route("/start_godograf_event", StartGodografEventResource())
+    app.add_route("/start_godograf_event/{name}", StartGodografItemEventResource())
     app.add_route("/end_godograf_event", EndGodografEventResource())
     app.add_route("/change_godograf_event", ChangeGodografEventResource())
     app.add_route("/download_godograf_event", DownloadGodografEventResource())
@@ -33,6 +36,8 @@ def create_application():
     app.add_route("/info", InfoResource())
     app.add_route("/set_clipping_value", ChangeClippingResource())
     app.add_route("/set_new_gain", ChangeGainResource())
+    app.add_route("/undo", UndoActionResource())
+    app.add_route("/godograf_is_ready", BusyGodografResource())
 
     # app.add_route("/open_files/{name:str}", OpenedFileItemResource)
     return app

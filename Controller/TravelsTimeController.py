@@ -31,10 +31,10 @@ class TravelsTimeController(QObject):
 
     @classmethod
     def load_godograf(cls, godograf_data, file_name):
-        CreateGodografController.start_godograf_event(god_type=GodografType.Manual,
-                                                      model_path=None,
-                                                      travels_time_name=file_name
-                                                      )
+        CreateGodografController.start_all_godograf_event(god_type=GodografType.Manual,
+                                                          model_path=None,
+                                                          travels_time_name=file_name
+                                                          )
         res = requests.get(
             server_url + "/load_godograf_event",
             json={"godograf_data": godograf_data,

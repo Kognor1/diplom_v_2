@@ -1,6 +1,6 @@
 import requests
 from PyQt5.QtCore import Qt, QEvent
-from PyQt5.QtGui import QKeyEvent
+from PyQt5.QtGui import QKeyEvent, QKeySequence
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QMenuBar, QToolBar, QProgressDialog
 
 from Controller.Actions.AutomaticAction import AutomaticAllAction, AutomaticCurrentAction
@@ -39,7 +39,13 @@ class BaseWidgetView(QWidget):
             elif Qt.Key_Plus == key:
                 self.press_plus_key()
                 return True
+            elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_Z:
+                self.undo()
         return False
+
+    def undo(self):
+        res = requests.get(server_url + "/undo",
+                           params={"name": self._model.current_cell_name})
 
     def press_plus_key(self):
         current_value = self.wiggle_clipping.choose_type.slider.value()
@@ -131,8 +137,8 @@ class BaseWidgetView(QWidget):
             AutomaticAlgoritmsAction(self, self._bokeh_controller, self._travels_time_widget))
         self.__main_menu_bar_automatic_nn.addAction(
             AutomaticAllAction(self, self._bokeh_controller, self._travels_time_widget))
-        self.__main_menu_bar_automatic_nn.addAction(
-            AutomaticCurrentAction(self, self._bokeh_controller, self._travels_time_widget))
+        # self.__main_menu_bar_automatic_nn.addAction(
+        #     AutomaticCurrentAction(self, self._bokeh_controller, self._travels_time_widget))
 
         return self.__main_menu_bar
 

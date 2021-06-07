@@ -20,7 +20,11 @@ class MainController(QObject):
     @classmethod
     def start_bokeh(cls):
         from bokeh_server.bokeh_server_main import bokeh_main
-        p = Process(target=bokeh_main, args=())
+        bokeh_main()
+
+    @classmethod
+    def start_bokeh_thread(cls):
+        p = Process(target=cls.start_bokeh, args=())
         p.start()
         return p
 
@@ -28,4 +32,3 @@ class MainController(QObject):
     def stop_bokeh(cls, p: Process):
         p.terminate()
         # p.join()
-

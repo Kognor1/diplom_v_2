@@ -9,9 +9,18 @@ class CreateGodografController(QObject):
         super().__init__()
 
     @staticmethod
-    def start_godograf_event(god_type, travels_time_name, model_path=None):
+    def start_all_godograf_event(god_type, travels_time_name, model_path=None):
         res = requests.get(
             server_url + "/start_godograf_event",
+            json={"type_godograf": god_type, "travels_time_name": travels_time_name,
+                  "model_path": model_path},
+        )
+        return res.json()
+
+    @staticmethod
+    def start_solo_godograf_event(god_type, travels_time_name, name, model_path=None):
+        res = requests.get(
+            server_url + f"/start_godograf_event/{name}",
             json={"type_godograf": god_type, "travels_time_name": travels_time_name,
                   "model_path": model_path},
         )

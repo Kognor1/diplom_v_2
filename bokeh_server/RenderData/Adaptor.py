@@ -61,6 +61,9 @@ class BokehAdaptor:
         self.new_vareas = []  # filter
         self.trace_mass = []  # filter
         self.current_normalization = "STD"
+        self.last_added_points_manual = []
+        self.last_added_points_semi = []
+        self.not_busy_godograf = True
 
     def add_godograf(self, name, godograf):
         self._godografs[name] = godograf
@@ -111,6 +114,11 @@ class BokehAdaptor:
     def normalization_plot_unlock(self, normalization_type, current_file_name):
         doc = self.godograf_settings.docs[current_file_name]
         doc.add_next_tick_callback(partial(self.normalization_plot, normalization_type))
+
+    @without_document_lock
+    def undo_unlock(self, current_file_name):
+        doc = self.godograf_settings.docs[current_file_name]
+        doc.add_next_tick_callback(self.undo_add_points)
 
     @without_document_lock
     def disable_filter_unlock(self, current_file_name):
@@ -273,7 +281,7 @@ class BokehAdaptor:
 
     def use_nn_for_godograf(self, model_path):
         import tensorflow as tf
-
+        self.not_busy_godograf = False
         self.model = tf.keras.models.load_model(
             model_path, custom_objects={"custom_loss1": custom_loss1, "custom_metric": custom_metric}
         )
@@ -283,6 +291,7 @@ class BokehAdaptor:
             new_coord = self.put_point(line_x, y)
             self.update_manual_points_rolled(new_coord=new_coord)
         print("ready")
+        self.not_busy_godograf = True
 
     def change_godografs(self, name, type_godograf=None):
         self.current_line.visible = False
@@ -340,6 +349,7 @@ class BokehAdaptor:
         if len(x_coord) == 0:
             new_coord = self.put_point(new_x, new_y)
             self.update_manual_points_rolled(new_coord)
+            self.last_added_points_semi.append([x_coord[0], x_coord[0]])
             return
         # if len(x_coord) == 1:
         #     new_coord = self.put_point(new_x, new_y)
@@ -348,22 +358,32 @@ class BokehAdaptor:
         if new_x >= x_coord[-1]:
             x1 = int(x_coord[-1] / self._bokeh_data.step)
             y1 = int(y_coord[-1])
+            x2 = int(new_x / self._bokeh_data.step)
+            y2 = int(new_y)
+            offset = x1 + 1
+            self.last_added_points_semi.append([x_coord[-1], new_x])
         elif new_x <= x_coord[0]:
-            x1 = int(x_coord[0] / self._bokeh_data.step)
-            y1 = int(y_coord[0])
+            x1 = int(new_x / self._bokeh_data.step)  # int(x_coord[0] / self._bokeh_data.step)
+            y1 = int(new_y)
+            x2 = int(x_coord[0] / self._bokeh_data.step)
+            y2 = int(y_coord[0])
+            offset = x1
+            self.last_added_points_semi.append([x_coord[0], new_x])
+            #
         else:
             return
-        x2 = int(new_x / self._bokeh_data.step)
-        y2 = int(new_y)
+
         window = window
+        if x1 > x2:
+            x1, y1, x2, y2 = x2, y2, x1, y2
         if x1 - x2 == 0:
             k = 0
         else:
             k = (y1 - y2) / (x1 - x2)
         b = y2 - k * x2
-        work_traces = self._bokeh_data.source_l.data["xs"][x1:x2]
+        work_traces = self._bokeh_data.traces[x1 + 1:x2 + 1]
         for index, trace in enumerate(work_traces):
-            new_y = index * k + b
+            new_y = (x1 + index+1) * k + b
             start_window = int(new_y - window)
             end_window = int(new_y + window)
             if start_window < 0:
@@ -376,6 +396,20 @@ class BokehAdaptor:
             elif type_semi == "MIN":
                 argmin = np.argmin(trace[start_window:end_window])
                 index_new = start_window + argmin
+            elif type_semi == "+/-":
+                need_val = None
+                for index_i in range(len(trace[start_window:end_window]) - 1):
+                    current = index_i
+                    next_i = current + 1
+                    next_val = trace[start_window:end_window][next_i]
+                    current_val = trace[start_window:end_window][current]
+                    if (current_val >= 0) and (next_val <= 0):
+                        need_val = index_i
+                        break
+                if need_val is None:
+                    index_new = None
+                else:
+                    index_new = start_window + need_val
             else:
                 need_val = None
                 for index_i in range(len(trace[start_window:end_window]) - 1):
@@ -383,7 +417,7 @@ class BokehAdaptor:
                     next_i = current + 1
                     next_val = trace[start_window:end_window][next_i]
                     current_val = trace[start_window:end_window][current]
-                    if (next_val < 0 and current_val >= 0) or (next_val >= 0 and current_val < 0):
+                    if (next_val >= 0) and (current_val <= 0):
                         need_val = index_i
                         break
                 if need_val is None:
@@ -392,7 +426,7 @@ class BokehAdaptor:
                     index_new = start_window + need_val
             if index_new is None:
                 continue
-            x_coord.append(index * self._bokeh_data.step)
+            x_coord.append((offset + index) * self._bokeh_data.step)
             y_coord.append(index_new)
             color.append("blue")
 
@@ -405,6 +439,9 @@ class BokehAdaptor:
 
     def update_manual_points(self, x_coord, y_coord, color):
         self.current_source_points.data = dict(x=x_coord, y=y_coord, color=color)
+
+    def check_busy_godograf(self):
+        return self.not_busy_godograf
 
     def semi_automatic_mer(self, traces, start, end):
         traces_prec_MER = traces[start:end].copy()
@@ -489,19 +526,18 @@ class BokehAdaptor:
         event.y = int(event.y)
         event.x = self.get_lines_coord(event.x)
 
-        if self.godograf_current_type[self.godograf_settings.current_travels_name]["type"] == GodografType.Manual:
-            x_coord: List = self.current_source_points.data["x"]
-            y_coord = self.current_source_points.data["y"]
-            color = self.current_source_points.data["color"]
-            if event.x in x_coord:
-                index = x_coord.index(event.x)
-                del x_coord[index]
-                del y_coord[index]
-                del color[index]
-                self.update_manual_points(x_coord, y_coord, color)
+        # if self.godograf_current_type[self.godograf_settings.current_travels_name]["type"] == GodografType.Manual:
+        x_coord: List = self.current_source_points.data["x"]
+        y_coord = self.current_source_points.data["y"]
+        color = self.current_source_points.data["color"]
+        if event.x in x_coord:
+            index = x_coord.index(event.x)
+            del x_coord[index]
+            del y_coord[index]
+            del color[index]
+            self.update_manual_points(x_coord, y_coord, color)
 
     def create_point_callback(self, event):
-        # todo узнать time_mass[0].max правильно ли для вертикального
         is_picked = SessionSettings().get_picked_by_name(SessionSettings().current_travels)
         if not self.current_source_points:
             self.create_godograf_source(type_godograf=GodografType.Manual)
@@ -514,12 +550,14 @@ class BokehAdaptor:
         event.x = self.get_lines_coord(event.x)
 
         if self.godograf_current_type[self.godograf_settings.current_travels_name]["type"] == GodografType.Manual:
+            self.last_added_points_manual.append(int(event.x))
             new_coord = self.put_point(event.x, event.y)
             self.update_manual_points_rolled(new_coord=new_coord)
-        if (
+        elif (
                 self.godograf_current_type[self.godograf_settings.current_travels_name]["type"]
                 == GodografType.SemiAutomatic
         ):
+
             window = int(self.godograf_current_type[self.godograf_settings.current_travels_name]["window"])
             type_semi = self.godograf_current_type[self.godograf_settings.current_travels_name]["meta"]
             self.update_semi_automatic_points(
@@ -528,6 +566,43 @@ class BokehAdaptor:
                 color=self.current_source_points.data["color"],
                 new_x=event.x, new_y=event.y, type_semi=type_semi, window=window
             )
+        else:
+            return
+
+    def undo_add_points(self):
+        x_coord = list(self.current_source_points.data["x"])
+        y_coord = list(self.current_source_points.data["y"])
+        color = list(self.current_source_points.data["color"])
+        if len(x_coord) == 1:
+            del x_coord[0]
+            del y_coord[0]
+            del color[0]
+            self.update_manual_points(x_coord, y_coord, color)
+            return
+        if self.godograf_current_type[self.godograf_settings.current_travels_name]["type"] == GodografType.Manual:
+            last_added_value = self.last_added_points_manual[-1]
+            if last_added_value in x_coord:
+                index = x_coord.index(last_added_value)
+                del x_coord[index]
+                del y_coord[index]
+                del color[index]
+                self.update_manual_points(x_coord, y_coord, color)
+            del self.last_added_points_manual[-1]
+        elif (
+                self.godograf_current_type[self.godograf_settings.current_travels_name]["type"]
+                == GodografType.SemiAutomatic
+        ):
+            prev_added_value, last_added_value = self.last_added_points_semi[-1]
+            if last_added_value in x_coord and prev_added_value in x_coord:
+                start_index = x_coord.index(prev_added_value)
+                end_index = x_coord.index(last_added_value)
+                if start_index > end_index:
+                    start_index, end_index = end_index - 1, start_index - 1
+                del x_coord[start_index + 1:end_index + 1]
+                del y_coord[start_index + 1:end_index + 1]
+                del color[start_index + 1:end_index + 1]
+                self.update_manual_points(x_coord, y_coord, color)
+                del self.last_added_points_semi[-1]
 
     def mouse_callback(self, event):
         # event.x = self.get_lines_coord(event.x)
@@ -537,7 +612,7 @@ class BokehAdaptor:
         self.plot = Figure(
             title="Seisemogramm",
             plot_width=1600,
-            plot_height=800,
+            plot_height=960,
             x_range=(self._bokeh_data.first_sou - 5, self._bokeh_data.last_sou + 5),
             # output_backend="canvas",
         )

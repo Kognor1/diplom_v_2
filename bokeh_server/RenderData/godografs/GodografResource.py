@@ -19,6 +19,19 @@ class StartGodografEventResource:
         resp.json = {"status": "ok"}
 
 
+class StartGodografItemEventResource:
+    def on_get(self, req: falcon.Request, resp: falcon.Response, name: str):
+        b_conroller = BokehController()
+        type_godograf = req.json["type_godograf"]
+        travels_time_name = req.json["travels_time_name"]
+        model_path = req.json["model_path"]
+        # name = req.json["name"]
+        b_conroller.open_main_data_widgets[name].bokeh_html.create_godograf_source_unlock(
+            type_godograf, name, travels_time_name, model_path)
+        SessionSettings().update_travels_settings(travels_time_name, True)
+        resp.json = {"status": "ok"}
+
+
 class EndGodografEventResource:
     def on_get(self, _: falcon.Request, resp: falcon.Response):
         pass

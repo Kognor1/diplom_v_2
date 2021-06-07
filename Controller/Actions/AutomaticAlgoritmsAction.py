@@ -67,9 +67,9 @@ class SettingsPlotWidget(QWidget):
             travels_time_name = self.line_edit.text()
         else:
             travels_time_name = self.travels_time.controller.current_godograf
-        CreateGodografController.start_godograf_event(god_type=self.alg_type.currentText(),
-                                                      travels_time_name=travels_time_name
-                                                      )
+        CreateGodografController.start_all_godograf_event(god_type=self.alg_type.currentText(),
+                                                          travels_time_name=travels_time_name
+                                                          )
         if self.check_box_create_new.isChecked():
             self.travels_time.add_travels_row(self.line_edit.text())
 

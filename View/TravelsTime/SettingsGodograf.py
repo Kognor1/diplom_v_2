@@ -23,6 +23,7 @@ class SettingsGodograf(QWidget):
         self.type_semi_automatic.addItem("MAX")
         self.type_semi_automatic.addItem("MIN")
         self.type_semi_automatic.addItem("+/-")
+        self.type_semi_automatic.addItem("-/+")
 
         self.window_layout = QHBoxLayout()
         self.window_line_edit = QLineEdit()

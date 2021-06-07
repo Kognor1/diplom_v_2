@@ -1,6 +1,6 @@
 import requests
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QIntValidator
 from PyQt5.QtWidgets import QAction, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QComboBox, QLabel, QLineEdit, \
     QCheckBox, QFileDialog
@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import QAction, QWidget, QVBoxLayout, QHBoxLayout, QPushBut
 from Controller.BokehTabController import BokehTabController
 from Controller.CreateGodografController import CreateGodografController
 from Utility.WidgetWrapper import WidgetWrapper
+from View.ProgressBar import ProgressWidget
 from View.TravelsTime import TravelsTimeView
 from View.TravelsTime.TravelsTimeView import TravelTimesView
 from bokeh_server.settings import server_url
@@ -25,16 +26,16 @@ class AutomaticAllAction(QAction):
         self.choose_type = None
 
     def open_choose_type_menu(self):
-        self.choose_type = SettingsPlotWidget(self.bokeh_tab_controller, self.travels_time)
+        self.choose_type = SettingsPlotWidget(self.travels_time)
         self.choose_type.show()
 
 
 class AutomaticCurrentAction(QAction):
 
-    def __init__(self, parent, bokeh_tab_controller, travels_time: TravelsTimeView):
+    def __init__(self, parent, travels_time: TravelsTimeView, name):
         super().__init__("&Automatic Current", parent)
         self.setStatusTip("Use NN")
-        self.choose_type = SettingsPlotWidget(bokeh_tab_controller, travels_time)
+        self.choose_type = SettingsPlotWidget(travels_time, name, type_file="solo")
         self.triggered.connect(self.open_choose_type_menu)
 
     def open_choose_type_menu(self):
@@ -42,10 +43,11 @@ class AutomaticCurrentAction(QAction):
 
 
 class SettingsPlotWidget(QWidget):
-    def __init__(self, bokeh_tab_controller, travels_time, parent=None):
+    def __init__(self, travels_time, name=None, type_file="all", parent=None):
         super().__init__(parent)
         self.travels_time: TravelsTimeView = travels_time
-        self.bokeh_tab_controller: BokehTabController = bokeh_tab_controller
+        self.type = type_file
+        self.name = name
         self.setGeometry(300, 300, 300, 300)
         self.vert_layout = QVBoxLayout()
         self.name_god_h_l = QHBoxLayout()
@@ -85,14 +87,29 @@ class SettingsPlotWidget(QWidget):
             travels_time_name = self.line_edit.text()
         else:
             travels_time_name = self.travels_time.controller.current_godograf
-        CreateGodografController.start_godograf_event(god_type=GodografType.Automatic,
-                                                      model_path=model_path,
-                                                      travels_time_name=travels_time_name
-                                                      )
+        if self.type == "all":
+            CreateGodografController.start_all_godograf_event(god_type=GodografType.Automatic,
+                                                              model_path=model_path,
+                                                              travels_time_name=travels_time_name
+                                                              )
+        else:
+            CreateGodografController.start_solo_godograf_event(god_type=GodografType.Automatic,
+                                                               model_path=model_path,
+                                                               travels_time_name=travels_time_name,
+                                                               name=self.name)
         if self.check_box_create_new.isChecked():
             self.travels_time.add_travels_row(self.line_edit.text())
-
+        self.progress = ProgressWidget()
+        self.progress.show()
+        self.timer = QTimer(self, timeout=self.check_ready_current)
+        self.timer.start(1000)
         self.close()
+
+    def check_ready_current(self):
+        req = requests.get(server_url + "/godograf_is_ready")
+        if req.json()["is_ready"]:
+            self.timer.stop()
+            self.progress.close()
 
     def create_path_field(self):
         self.open_file_btn.clicked.connect(self.__get_model_file)

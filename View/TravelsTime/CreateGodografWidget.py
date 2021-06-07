@@ -55,7 +55,7 @@ class CreateGodografWidget(QWidget):
         model_path = self.model_path_line_edit.text()
         if current_type != GodografType.Automatic:
             model_path = None
-        self._create_godograf_controller.start_godograf_event(
+        self._create_godograf_controller.start_all_godograf_event(
             current_type, travels_time_name=row_name,
             model_path=model_path
         )
