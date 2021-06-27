@@ -115,7 +115,7 @@ class GodografSettings(metaclass=SingletonMeta):
     #
 
     def save_godograf(self, godograf_name):
-        name = QFileDialog.getSaveFileName()
+        name = QFileDialog.getSaveFileName(filter="Txt Files (*.txt)")
         if name[0] != "":
             file = open(name[0], "w")
             for key, value in self.all_godografs.items():

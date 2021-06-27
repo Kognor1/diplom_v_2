@@ -720,16 +720,9 @@ class BokehAdaptor:
         wheel_button.js_on_click(cb_wheel)
         hover_button.js_on_click(cb_hover)
         multi_line = MultiLine(xs="xs", ys="ys", line_color="black", line_width=2, name="mult")  # вертикальные
-        # полоски
 
         self.plot.on_event(Tap, self.create_point_callback)
         self.plot.on_event(DoubleTap, self.delete_point_callback)
-        # self.current_mutual_timing_points = ColumnDataSource(data=dict(x=[], y=[], color=["green"]))
-        # self.current_mutual_circle = self.plot.asterisk(
-        #     source=self.current_mutual_timing_points, x="x", y="y", color="color", size=13, line_width=1.5
-        # )
-        # self.mutual_timing_points[self.godograf_settings.current_travels_name] = self.current_mutual_circle
-        # self.plot.on_event(MouseMove, self.mouse_callback)
         self.plot.add_glyph(self._bokeh_data.source_l, multi_line)
         patches = Patches(xs="xs", ys="ys", fill_color="black", line_alpha=0.1)  # закраска
         self.plot.add_glyph(self._bokeh_data.source_p, patches)

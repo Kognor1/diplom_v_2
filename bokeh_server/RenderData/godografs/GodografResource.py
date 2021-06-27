@@ -3,6 +3,7 @@ import falcon
 from bokeh_server.RenderData.Controller import BokehController
 from bokeh_server.RenderData.godografs.Godograf import GodografSettings, GodografType
 from bokeh_server.utils.Settings import SessionSettings
+import numpy as np
 
 
 class StartGodografEventResource:
@@ -29,7 +30,8 @@ class StartGodografItemEventResource:
         for key, value in b_conroller.open_main_data_widgets.items():
             if key == name:
                 b_conroller.open_main_data_widgets[name].bokeh_html.create_godograf_source_unlock(
-                    type_godograf, name, travels_time_name, model_path)
+                    type_godograf, name, travels_time_name, model_path
+                )
             else:
                 b_conroller.open_main_data_widgets[key].bokeh_html.create_godograf_source_unlock(
                     GodografType.Manual, key, travels_time_name, model_path
@@ -69,7 +71,14 @@ class DownloadGodografEventResource:
                 a = b_conroller.open_main_data_widgets[key].bokeh_html.sources_points[godograf_name]
                 energy_source = b_conroller.open_main_data_widgets[key].bokeh_html.energy_source
                 for i in zip(a.data["x"], a.data["y"]):
-                    res[godograf_name].append(str(energy_source) + ", 0, " + str(i[0]) + ", 0, " + str(i[1]) + "\n")
+                    res[godograf_name].append(
+                        str(energy_source)
+                        + ", 0, "
+                        + str(np.around(i[0], 1))
+                        + ", 0, "
+                        + str(np.around(i[1], 1))
+                        + "\n"
+                    )
         return res
 
 

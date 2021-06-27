@@ -107,7 +107,7 @@ class TravelTimesView(QWidget):
         row = self.table.currentIndex().row()
         col = self.table.currentIndex().column()
         name = self.table.item(row, 0).text()
-        file_path = QFileDialog.getSaveFileName()
+        file_path = QFileDialog.getSaveFileName(filter="Txt Files (*.txt)")
         if file_path[0] != "":
             self.controller.local_save_godofraf(name, file_path[0])
 
