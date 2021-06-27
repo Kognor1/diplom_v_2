@@ -172,7 +172,7 @@ class BokehController(metaclass=SingletonMeta):
 
     def create_application(self, filename):
         _, name = os.path.split(filename)
-        bokeh_html: BokehAdaptor = BokehAdaptor(filename)
+        bokeh_html: BokehAdaptor = BokehAdaptor(filename, self)
         plot = bokeh_html.render()
         app = Application(DatabaseHandler(plot, name))
         self.open_main_data_widgets[name] = BokehApplication(app, bokeh_html, plot, filename)

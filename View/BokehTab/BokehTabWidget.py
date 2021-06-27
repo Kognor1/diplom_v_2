@@ -1,6 +1,3 @@
-import threading
-from time import sleep
-
 import requests
 from PyQt5 import QtWebEngineWidgets
 from PyQt5.QtCore import QUrl, Qt
@@ -41,7 +38,6 @@ class BokehTabWidget(QWidget):
 
     def update_data_info(self):
         while True:
-            sleep(0.01)
             # self.__info_data_label.clear()
             res = requests.get(server_url + "/info", params={"key": self.name_tab})
             info_data = res.json()

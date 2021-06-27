@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import (
     QTableView,
     QPushButton, QMenu, QAbstractItemView,
 )
+from tornado import gen
 
 from Controller.Actions.AutomaticAction import AutomaticCurrentAction
 from Controller.SelectFileController import SelectFileController
@@ -141,7 +142,7 @@ class SelectFileView(QWidget):
 
     def check_apps_path(self):
         if self.apps_path:
-            sleep(2)  # todo хз ли нужно
+            # gen.sleep(2)  # todo хз ли нужно
             self.timer.stop()
             self._bokeh_tab_view.add_custom_tab(self.apps_path)
             self.progress.close()

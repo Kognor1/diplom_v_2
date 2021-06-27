@@ -32,6 +32,8 @@ from bokeh.models import (
 )
 from bokeh.plotting import figure, Figure
 from scipy.signal import filtfilt
+from tornado import gen
+
 from bokeh_server.nn_utils.utils import custom_loss1, custom_metric
 from bokeh_server.JsCode.js_code import clipping_code
 from bokeh_server.RenderData.godografs.Godograf import GodografSettings, Godograf, GodografType
@@ -46,9 +48,10 @@ class BokehAdaptor:
     coord_list = []
     coord_list_x = []
 
-    def __init__(self, file):
+    def __init__(self, file, parent):
         self.last_mouse_coord = None
         self.file_path = file
+        self._parent = parent
         from bokeh_server.RenderData.Controller import BokehSegyFile
 
         self._bokeh_data = BokehSegyFile(file)
@@ -189,6 +192,7 @@ class BokehAdaptor:
     @without_document_lock
     def change_godograf_unlock(self, current_file_name, travels_time_name):
         doc = self.godograf_settings.docs[current_file_name]
+        gen.sleep(1)
         doc.add_next_tick_callback(partial(self.change_godografs, travels_time_name))
 
     @without_document_lock
@@ -261,14 +265,20 @@ class BokehAdaptor:
         self.current_source_points.data["color"] = [color for i in range(len(self.current_source_points.data["color"]))]
         self.godograf_settings.set_current_godograf_color(color)
 
+    def create_mut_point(self, x, y, en_point):
+        for key, value in self._parent.open_main_data_widgets.items():
+            en_point_cur_file = int(self._parent.open_main_data_widgets[key].bokeh_html.bokeh_data.energy_source_point)
+            if en_point_cur_file == x and self.bokeh_data.energy_source_point != x:
+                self._parent.open_main_data_widgets[key].bokeh_html.mutual_timing_without_unlock(key, en_point, y)
+
     def create_godograf_source(self, type_godograf, travels_name=None, f_name=None, model_path: Optional[str] = None):
         self.godograf_settings.create_or_choise_part_godograf(name=travels_name, f_name=f_name)
         self.godograf_current_type[travels_name] = {"type": type_godograf, "meta": None}
-        source_points = ColumnDataSource(data=dict(x=[], y=[], color=["blue"]))
+        source_points = ColumnDataSource(data=dict(x=[], y=[], color=[]))
 
         circle = self.plot.asterisk(source=source_points, x="x", y="y", color="color", size=13, line_width=1.5)
         line: Line = self.plot.line(source=source_points, x="x", y="y", line_width=4, line_alpha=0.3, line_color="red")
-        mutual_timing_points = ColumnDataSource(data=dict(x=[], y=[], color=["green"]))
+        mutual_timing_points = ColumnDataSource(data=dict(x=[], y=[], color=[]))
         current_mutual_circle = self.plot.asterisk(
             source=mutual_timing_points, x="x", y="y", color="color", size=13, line_width=1.5
         )
@@ -316,6 +326,7 @@ class BokehAdaptor:
         for x, y in enumerate(y_pred):
             line_x = x * self._bokeh_data.step
             new_coord = self.put_point(line_x, y)
+            self.create_mut_point(float(line_x), float(y), int(self._bokeh_data.energy_source_point))
             self.update_manual_points_rolled(new_coord=new_coord)
         print("ready")
         self.not_busy_godograf = True
@@ -382,6 +393,7 @@ class BokehAdaptor:
     def update_semi_automatic_points(self, x_coord, y_coord, color, new_x, new_y, type_semi="MAX", window=10):
         if len(x_coord) == 0:
             new_coord = self.put_point(new_x, new_y)
+            # self.create_mut_point(float(new_x), float(new_y), int(self._bokeh_data.energy_source_point))
             self.update_manual_points_rolled(new_coord)
             self.last_added_points_semi.append([x_coord[0], x_coord[0]])
             return
@@ -590,7 +602,7 @@ class BokehAdaptor:
             self.last_added_points_manual.append(int(event.x))
             new_coord = self.put_point(event.x, event.y)
             self.update_manual_points_rolled(new_coord=new_coord)
-            self.create_muting_point_req(event.x, event.y, int(self._bokeh_data.energy_source_point))
+            self.create_mut_point(float(event.x), float(event.y), int(self._bokeh_data.energy_source_point))
         elif (
                 self.godograf_current_type[self.godograf_settings.current_travels_name]["type"]
                 == GodografType.SemiAutomatic
@@ -607,6 +619,7 @@ class BokehAdaptor:
                 type_semi=type_semi,
                 window=window,
             )
+            # self.create_muting_point_req(event.x, event.y, int(self._bokeh_data.energy_source_point))
         else:
             return
 
