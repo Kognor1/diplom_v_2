@@ -272,7 +272,7 @@ class BokehAdaptor:
         current_mutual_circle = self.plot.asterisk(
             source=mutual_timing_points, x="x", y="y", color="color", size=13, line_width=1.5
         )
-        self.hv.renderers = [circle]
+        self.hv.renderers = [circle, current_mutual_circle]
         # if self._godograf_settings.current_travels_name == None:
         #
         if (
@@ -679,8 +679,8 @@ class BokehAdaptor:
             tooltips="""<div>
                             <div>
                                 <font face="Arial" size="5">SOU: $x{int}, REC: """
-                                    + str(self._bokeh_data.energy_source_point)
-                                    + """ T: $y{int} </font>
+                     + str(self._bokeh_data.energy_source_point)
+                     + """ T: $y{0.0} </font>
                             </div>
                             <div>
                     </div>
@@ -761,6 +761,7 @@ class BokehAdaptor:
         wheel_button.active = False
 
         hover_button.visible = False
+        hover_button.active = False
         self.plot.y_range.flipped = True
 
         layout1 = column(self.gain_slider, checkbox_button_group, wheel_button, hover_button, self.plot)
