@@ -23,10 +23,16 @@ class BokehTabController(QObject):
         for key, value in app_paths.items():
             bokeh_tab = BokehTabWidget(key, 32, value)
             tabs_list.append({"name": key, "tab": bokeh_tab})
+            # в первый раз долго прогружается
+            bokeh_tab.click_hover()
+            bokeh_tab.click_hover()
+            bokeh_tab.click_zoom()
+            bokeh_tab.click_zoom()
         for tab in tabs_list:
             tab_widget = QTabWidget(parent)
             tab_widget.addTab(tab["tab"], tab["name"])
             tab_widget.setVisible(False)
+
             self.open_bokeh_data_tab[tab["name"]] = tab_widget
         return self.open_bokeh_data_tab
 

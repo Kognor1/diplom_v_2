@@ -32,6 +32,10 @@ class BokehSegyFile:
             self.energy_source_point = 0
         self.vareas_mass = []
         self.trace_mass = []
+        if self.bin_head["Samples"] != 0:
+            self.samples = self.bin_head["Samples"]
+        else:
+            self.samples = self.traces.shape[1]
         self.time_mass = []
         self.offsets = self.trace_head["offset"]
         self.dr = abs(self.offsets[1] - self.offsets[2])
@@ -66,7 +70,9 @@ class BokehSegyFile:
     def insert_zeros_in_trace(self, trace):
         time = np.arange(len(trace))
         zero_idx = np.where(np.diff(np.signbit(trace)))[0]
-
+        for index in zero_idx:
+            current_index = index
+            next_index = current_index + 1
         time_at_zero = time[zero_idx] - trace[zero_idx] / np.diff(trace)[zero_idx]
         trace_z = np.insert(trace, zero_idx + 1, 0)
         time_z = np.insert(time, zero_idx + 1, time_at_zero)
@@ -117,6 +123,7 @@ class BokehSegyFile:
         self.lines = [i * self.step for i in range(self.Num_of_traces)]
 
         self.trace_mass, self.vareas_mass, self.time_mass = RenderDataUtils.normalization(
+            bokeh_data=self,
             traces=self.traces,
             time_mass=self.time_mass,
             offsets=self.offsets,
@@ -145,14 +152,14 @@ class BokehSegyFile:
 
     def update_source_copy_p(self, vareas_mass, time_mass, num_of_traces):
 
-        self.source_copy_p.data = {
+        self.source_p.data = {
             "xs": np.array([vareas_mass[i] + self.step * i for i in range(num_of_traces)]),
             "ys": np.array([time_mass[i] for i in range(num_of_traces)]),
         }
 
     def update_source_copy_l(self, trace_mass, time_mass, num_of_traces):
         a = np.array([trace_mass[i] + self.step * i for i in range(self.Num_of_traces)])
-        self.source_copy_l.data = {
+        self.source_l.data = {
             "xs": np.array([trace_mass[i] + self.step * i for i in range(self.Num_of_traces)]),
             "ys": np.array([time_mass[i] for i in range(num_of_traces)]),
         }

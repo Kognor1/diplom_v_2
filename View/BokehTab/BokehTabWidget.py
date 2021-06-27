@@ -26,11 +26,11 @@ class BokehTabWidget(QWidget):
         self.browser = QWebEngineView()
         self.browser.setZoomFactor(0.84)
         # self.browser.setContextMenuPolicy(Qt.NoContextMenu)
-        # self.dev = QWebEngineView()
+        self.dev = QWebEngineView()
         self.path = path
         self.name = name_tab
         self.hBox.addWidget(self.browser, stretch=100)
-        # self.hBox.addWidget(self.dev, stretch=20)
+        self.hBox.addWidget(self.dev, stretch=20)
         # self.hBox.addWidget(self.__info_data_label, stretch=5)
         # self.hBox.addWidget(self.test, stretch=20)
         self.vbox.addLayout(self.hBox)
@@ -57,7 +57,7 @@ class BokehTabWidget(QWidget):
     def controls(self):
         self.browser.settings().setAttribute(QtWebEngineWidgets.QWebEngineSettings.JavascriptEnabled, True)
         self.browser.setUrl(QUrl(self.path))
-        # self.browser.page().setDevToolsPage(self.dev.page())
+        self.browser.page().setDevToolsPage(self.dev.page())
 
     def change_wiggle(self):
         self.browser.page().runJavaScript(
@@ -68,5 +68,20 @@ class BokehTabWidget(QWidget):
     def change_clipping(self):
         self.browser.page().runJavaScript(
             """
+              console.log($("div:contains('Clipping')"))
                           $("div:contains('Clipping')").click()"""
+        )
+
+    def click_zoom(self):
+        self.browser.page().runJavaScript(
+            """
+                  $(".bk.bk-btn.bk-btn-success").click()"""
+
+        )
+
+    def click_hover(self):
+        self.browser.page().runJavaScript(
+            """
+                  $(".bk.bk-btn.bk-btn-danger").click()"""
+
         )

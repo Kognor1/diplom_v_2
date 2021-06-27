@@ -41,11 +41,25 @@ class BaseWidgetView(QWidget):
                 return True
             elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_Z:
                 self.undo()
+            elif Qt.Key_Shift == key:
+                self.press_shift()
+                return True
+            elif Qt.Key_H == key:
+                self.press_h_key()
+                return True
         return False
 
     def undo(self):
         res = requests.get(server_url + "/undo",
                            params={"name": self._model.current_cell_name})
+
+    def press_shift(self):
+        for key, value in self._bokeh_controller.open_bokeh_data_tab.items():
+            value.widget(0).click_zoom()
+
+    def press_h_key(self):
+        for key, value in self._bokeh_controller.open_bokeh_data_tab.items():
+            value.widget(0).click_hover()
 
     def press_plus_key(self):
         current_value = self.wiggle_clipping.choose_type.slider.value()

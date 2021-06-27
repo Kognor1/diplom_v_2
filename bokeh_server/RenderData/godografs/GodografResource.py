@@ -26,8 +26,14 @@ class StartGodografItemEventResource:
         travels_time_name = req.json["travels_time_name"]
         model_path = req.json["model_path"]
         # name = req.json["name"]
-        b_conroller.open_main_data_widgets[name].bokeh_html.create_godograf_source_unlock(
-            type_godograf, name, travels_time_name, model_path)
+        for key, value in b_conroller.open_main_data_widgets.items():
+            if key == name:
+                b_conroller.open_main_data_widgets[name].bokeh_html.create_godograf_source_unlock(
+                    type_godograf, name, travels_time_name, model_path)
+            else:
+                b_conroller.open_main_data_widgets[key].bokeh_html.create_godograf_source_unlock(
+                    GodografType.Manual, key, travels_time_name, model_path
+                )
         SessionSettings().update_travels_settings(travels_time_name, True)
         resp.json = {"status": "ok"}
 
@@ -63,7 +69,7 @@ class DownloadGodografEventResource:
                 a = b_conroller.open_main_data_widgets[key].bokeh_html.sources_points[godograf_name]
                 energy_source = b_conroller.open_main_data_widgets[key].bokeh_html.energy_source
                 for i in zip(a.data["x"], a.data["y"]):
-                    res[godograf_name].append(str(energy_source) + ", " + str(i[0]) + ", " + str(i[1]) + "\n")
+                    res[godograf_name].append(str(energy_source) + ", 0, " + str(i[0]) + ", 0, " + str(i[1]) + "\n")
         return res
 
 
@@ -78,7 +84,7 @@ class LoadGodografResource:
     @classmethod
     def load_from_data_godograf(cls, godograf_data, file_name, b_conroller):
         for row in godograf_data:
-            energy_source, src_x, time = row.split(",")
+            energy_source, z_rec, src_x, z_sou, time = row.split(",")
             for key, value in b_conroller.open_main_data_widgets.items():
                 if b_conroller.open_main_data_widgets[key].bokeh_html.energy_source == int(energy_source):
                     new_coord = b_conroller.open_main_data_widgets[key].bokeh_html.put_point(
@@ -88,3 +94,18 @@ class LoadGodografResource:
                         key, new_coord=new_coord
                     )
         return "ok"
+
+
+class AddMutingPointResource:
+    def on_get(self, req: falcon.Request, resp: falcon.Response):
+        b_conroller = BokehController()
+        x = req.json["x"]
+        y = req.json["y"]
+        en_point = req.json["en_point"]
+        for key, value in b_conroller.open_main_data_widgets.items():
+            en_point_cur_file = int(b_conroller.open_main_data_widgets[key].bokeh_html.bokeh_data.energy_source_point)
+            if en_point_cur_file == x:
+                # if x < 0 or x > b_conroller.open_main_data_widgets[key].bokeh_html.bokeh_data.samples:
+                #     continue
+                b_conroller.open_main_data_widgets[key].bokeh_html.mutual_timing_without_unlock(key, en_point, y)
+        resp.json = {"status": "ok"}

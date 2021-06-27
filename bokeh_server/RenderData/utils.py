@@ -23,17 +23,28 @@ class RenderDataUtils:
     def insert_zeros_in_trace(trace):
         time = np.arange(len(trace))
         zero_idx = np.where(np.diff(np.signbit(trace)))[0]
-
-        time_at_zero = time[zero_idx] - trace[zero_idx] / np.diff(trace)[zero_idx]
+        new_points = []
+        for index in zero_idx:
+            y1 = index
+            x1 = trace[index]
+            x2 = trace[index + 1]
+            y2 = y1 + 1
+            k = (y1 - y2) / (x1 - x2)
+            b = y2 - k * x2
+            new_y = b
+            new_points.append(new_y)
+        # time_at_zero = time[zero_idx] - trace[zero_idx] / np.diff(trace)[zero_idx]
         trace_z = np.insert(trace, zero_idx + 1, 0)
-        time_z = np.insert(time, zero_idx + 1, time_at_zero)
+        time = time.astype('float32')
+        time_z = np.insert(time, zero_idx + 1, new_points)
         return trace_z, time_z
 
     @classmethod
-    def normalization(cls, traces, time_mass, offsets, sp, dr, normalization_type, patch=False):
+    def normalization(cls, bokeh_data, traces, time_mass, offsets, sp, dr, normalization_type, patch=False,
+                      is_filter=False):
         trace_mass = []
-        if not patch:
-            time_mass = []
+        # if not patch:
+        time_mass = []
 
         vareas_mass = []
 
@@ -56,7 +67,7 @@ class RenderDataUtils:
                     new_traces = data[i] * offsets[i]
             else:  # None
                 new_traces = data[i]
-
+            # if not is_filter:
             traces_step1, time_step1 = cls.insert_zeros_in_trace(new_traces)
 
             traces_step11 = traces_step1
@@ -65,10 +76,15 @@ class RenderDataUtils:
 
             a = np.where(traces_step11 > 0, traces_step11, 0)
             trace_mass.append(traces_step11)
-            if not patch:
-                time_mass.append(time_step1)
+            # if not patch:
+            time_mass.append(time_step1)
             vareas_mass.append(a)
-
+            # else:
+            #     # vareas_mass.append(new_traces)
+            #
         # for trace in trace_mass:
         #     trace /= max_traces
+        # ' if is_filter:
+        #      # trace_mass = bokeh_data.trace_mass
+        #      time_mass = bokeh_data.time_mass'
         return trace_mass, vareas_mass, time_mass

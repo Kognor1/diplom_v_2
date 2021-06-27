@@ -72,20 +72,6 @@ class SelectFileView(QWidget):
             action = menu.exec_(QCursor.pos())
             if action == openAction:
                 pass
-
-    # def eventFilter(self, source, event):
-    #     if (event.type() == QEvent.MouseButtonPress and
-    #             event.buttons() == Qt.RightButton and
-    #             source is self.table.viewport()):
-    #         # item = self._model.item(event.pos().x(), event.pos().y())
-    #         print('Global Pos:', event.pos().x(),event.pos().y())
-    #         item = None
-    #         if item is not None:
-    #             print('Table Item:', item.row(), item.column())
-    #             self.menu = QMenu(self)
-    #             self.menu.addAction(item.text())  # (QAction('test'))
-    #             # menu.exec_(event.globalPos())
-    #     return super(SelectFileView, self).eventFilter(source, event)
     def onCountChanged(self, value):
         self.progress.progress.setValue(value)
 
@@ -155,6 +141,7 @@ class SelectFileView(QWidget):
 
     def check_apps_path(self):
         if self.apps_path:
+            sleep(2)  # todo хз ли нужно
             self.timer.stop()
             self._bokeh_tab_view.add_custom_tab(self.apps_path)
             self.progress.close()
