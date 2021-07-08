@@ -1,4 +1,5 @@
 import os
+import sys
 from typing import Optional
 
 import numpy as np
@@ -186,6 +187,7 @@ class BokehController(metaclass=SingletonMeta):
         start_widget = next(iter(self.open_main_data_widgets.values()))
         self.bokeh_worker = BokehWorker(apps)
         self.bokeh_worker.start()
+
         self.curren_main_data_widget = start_widget
         app_path = {}
         for i in apps:

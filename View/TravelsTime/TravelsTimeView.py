@@ -47,8 +47,8 @@ class TravelTimesView(QWidget):
         self.create_godograf_button.clicked.connect(self._create_gogograf_button_callback)
         self.load_godograf_button.clicked.connect(self._load_gogograf_button_callback)
         self.table = QTableWidget(self)
-        self.table.setColumnCount(4)
-        self.table.setHorizontalHeaderLabels(["File", "Color", "Settings", "Export"])
+        self.table.setColumnCount(5)
+        self.table.setHorizontalHeaderLabels(["File", "Color", "Settings", "Export", "Удалить"])
         self.table_header = self.table.horizontalHeader()
         self.table.cellClicked.connect(self.__cell_click)
         # self.table.cellClicked.connect(self.__cell_click)
@@ -56,6 +56,7 @@ class TravelTimesView(QWidget):
         self.table_header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
         self.table_header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
         self.table_header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        self.table_header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
         self.v_layout.addWidget(WidgetWrapper(h_layout))
         self.v_layout.addWidget(self.table)
         self.create_godograf_controller = CreateGodografController()
@@ -96,12 +97,22 @@ class TravelTimesView(QWidget):
         q_settings_button = QPushButton("Settings")
         q_settings_button.clicked.connect(partial(self._q_settings_button_click, settings_godograf))
         q_export_button = QPushButton("Export")
+        q_del_button = QPushButton("Удалить")
         q_export_button.clicked.connect(self.export)
+        q_del_button.clicked.connect(self.delete_godograf)
         self.table.setItem(row, 0, cell)
         self.table.setCellWidget(row, 1, q_color)
         self.table.setCellWidget(row, 2, q_settings_button)
         self.table.setCellWidget(row, 3, q_export_button)
+        self.table.setCellWidget(row, 4, q_del_button)
         return name
+
+    def delete_godograf(self):
+        row = self.table.currentIndex().row()
+        col = self.table.currentIndex().column()
+        name = self.table.item(row, 0).text()
+        self.controller.delete_godofraf(name)
+        self.table.removeRow(row)
 
     def export(self):
         row = self.table.currentIndex().row()

@@ -113,6 +113,32 @@ class BokehAdaptor:
         )
 
     @without_document_lock
+    def delete_godograf_source_unlock(self, current_file_name, travels_time_name):
+        doc = self.godograf_settings.docs[current_file_name]
+        doc.add_next_tick_callback(
+            partial(self.delete_godograf_source, travels_time_name, current_file_name)
+        )
+
+    def delete_godograf_source(self, travels_name=None, f_name=None):
+        del self.godograf_settings.all_godografs[f_name][travels_name]
+        if "None" in self.godograf_settings.all_godografs:
+            del self.godograf_settings.all_godografs["None"]
+        del self.godograf_current_type[travels_name]
+        del self.lines[travels_name]
+        del self.circles[travels_name]
+        del self.sources_points[travels_name]
+        del self.sources_mutual_points[travels_name]
+        del self.mutual_timing_points[travels_name]
+        self.current_line.visible = False
+        self.current_circle.visible = False
+        self.current_mutual_circle.visible = False
+
+        self.current_mutual_circle = None
+        self.current_circle = None
+        self.current_line = None
+        self.current_source_points = None
+
+    @without_document_lock
     def change_clipping_unlock(self):
         _, name = os.path.split(self.godograf_settings.current_file_name)
         doc = self.godograf_settings.docs[name]
@@ -139,12 +165,6 @@ class BokehAdaptor:
     def disable_filter(self):
         self._bokeh_data.traces = self._bokeh_data.original_traces
         self.normalization_plot(self.current_normalization, traces=self.bokeh_data.original_traces, patch=False)
-        # self._bokeh_data.update_source_copy_p(
-        #     self._bokeh_data.vareas_mass, self._bokeh_data.time_mass, self._bokeh_data.Num_of_traces
-        # )
-        # self._bokeh_data.update_source_copy_l(
-        #     self._bokeh_data.trace_mass, self._bokeh_data.time_mass, self._bokeh_data.Num_of_traces
-        # )
 
     @without_document_lock
     def filter_plot_unlock(self, current_file_name, value, type_filter, order=4):
@@ -192,7 +212,6 @@ class BokehAdaptor:
     @without_document_lock
     def change_godograf_unlock(self, current_file_name, travels_time_name):
         doc = self.godograf_settings.docs[current_file_name]
-        gen.sleep(1)
         doc.add_next_tick_callback(partial(self.change_godografs, travels_time_name))
 
     @without_document_lock
@@ -475,7 +494,7 @@ class BokehAdaptor:
             x_coord.append((offset + index) * self._bokeh_data.step)
             y_coord.append(index_new)
             color.append("blue")
-
+            self.create_mut_point(float((offset + index) * self._bokeh_data.step), float(index_new), int(self._bokeh_data.energy_source_point))
         new_coord = sorted(zip(x_coord, y_coord, color), key=lambda x_cord: x_cord[0])
         self.update_manual_points_rolled(new_coord)
 
@@ -589,6 +608,8 @@ class BokehAdaptor:
 
     def create_point_callback(self, event):
         is_picked = SessionSettings().get_picked_by_name(SessionSettings().current_travels)
+        if len(self.sources_points) <= 0:
+            return
         if not self.current_source_points:
             self.create_godograf_source(type_godograf=GodografType.Manual)
         if not is_picked:

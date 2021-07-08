@@ -1,6 +1,4 @@
 from threading import Thread
-from time import sleep
-
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QCursor
 from PyQt5.QtWidgets import (
@@ -137,7 +135,6 @@ class SelectFileView(QWidget):
                 connected = False
             except Exception as e:
                 print(e)
-            sleep(1)
         # self._bokeh_tab_view.add_custom_tab(apps_path)
 
     def check_apps_path(self):

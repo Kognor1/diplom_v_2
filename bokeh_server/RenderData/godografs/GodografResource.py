@@ -40,6 +40,15 @@ class StartGodografItemEventResource:
         resp.json = {"status": "ok"}
 
 
+class DeleteGodografItemEventResource:
+    def on_get(self, req: falcon.Request, resp: falcon.Response, name: str):
+        b_conroller = BokehController()
+        for key, value in b_conroller.open_main_data_widgets.items():
+            b_conroller.open_main_data_widgets[key].bokeh_html.delete_godograf_source_unlock(key, name)
+        # SessionSettings().update_travels_settings(travels_time_name, True)
+        resp.json = {"status": "ok"}
+
+
 class EndGodografEventResource:
     def on_get(self, _: falcon.Request, resp: falcon.Response):
         pass

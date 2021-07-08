@@ -11,7 +11,7 @@ from bokeh_server.RenderData.godografs.GodografResource import (
     StartGodografEventResource,
     EndGodografEventResource,
     ChangeGodografEventResource, DownloadGodografEventResource, LoadGodografResource, StartGodografItemEventResource,
-    AddMutingPointResource,
+    AddMutingPointResource, DeleteGodografItemEventResource,
 )
 from bokeh_server.RenderData.resource import RenderDataResource
 from bokeh_server.utils.busy_godograf_resource import BusyGodografResource
@@ -40,6 +40,6 @@ def create_application():
     app.add_route("/undo", UndoActionResource())
     app.add_route("/godograf_is_ready", BusyGodografResource())
     app.add_route("/add_mutual_point", AddMutingPointResource())
-
+    app.add_route("/delete_godograf/{name}", DeleteGodografItemEventResource())
     # app.add_route("/open_files/{name:str}", OpenedFileItemResource)
     return app

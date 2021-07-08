@@ -1,3 +1,4 @@
+import sys
 import threading
 
 from bokeh.embed import server_document
@@ -57,5 +58,6 @@ class BokehWorker(threading.Thread):
         self.server = Server(
             apps, port=bokeh_port, io_loop=IOLoop(), extra_patterns=extra, allow_websocket_origin=["*"]
         )
+
         self.server.start()
         self.server.io_loop.start()

@@ -16,29 +16,26 @@ class BokehTabWidget(QWidget):
         self.name_tab = name_tab
         self.__info_data_label = QLabel(
             "SRC_X: {0} REC_X: {1} \t File: {2};   Time: {3};   Trace: {4};  Path:  {5}".format(
-                0,
-                2,
-                name_tab, time, 9, path)
+                0, 2, name_tab, time, 9, path
+            )
         )
         self.browser = QWebEngineView()
         self.browser.setZoomFactor(0.84)
-        # self.browser.setContextMenuPolicy(Qt.NoContextMenu)
-        self.dev = QWebEngineView()
+        self.browser.setContextMenuPolicy(Qt.NoContextMenu)
+        # Enable DEV
+        # self.dev = QWebEngineView()
+        # self.hBox.addWidget(self.dev, stretch=20)
+        # self.browser.page().setDevToolsPage(self.dev.page())
         self.path = path
         self.name = name_tab
         self.hBox.addWidget(self.browser, stretch=100)
-        self.hBox.addWidget(self.dev, stretch=20)
-        # self.hBox.addWidget(self.__info_data_label, stretch=5)
-        # self.hBox.addWidget(self.test, stretch=20)
+        self.browser.settings().setAttribute(QtWebEngineWidgets.QWebEngineSettings.JavascriptEnabled, True)
         self.vbox.addLayout(self.hBox)
         self.controls()
-        # x = threading.Thread(target=self.update_data_info, args=())
-        # x.start()
         self.setLayout(self.vbox)
 
     def update_data_info(self):
         while True:
-            # self.__info_data_label.clear()
             res = requests.get(server_url + "/info", params={"key": self.name_tab})
             info_data = res.json()
             self.__info_data_label.setText(
@@ -48,36 +45,36 @@ class BokehTabWidget(QWidget):
                     info_data["filename"],
                     info_data["time"],
                     info_data["traces"],
-                    info_data["file_path"]))
+                    info_data["file_path"],
+                )
+            )
 
     def controls(self):
-        self.browser.settings().setAttribute(QtWebEngineWidgets.QWebEngineSettings.JavascriptEnabled, True)
         self.browser.setUrl(QUrl(self.path))
-        self.browser.page().setDevToolsPage(self.dev.page())
 
     def change_wiggle(self):
         self.browser.page().runJavaScript(
             """
-                   $("div:contains('Wiggle')").click()"""
+                $("div:contains('Wiggle')").click()
+            """
         )
 
     def change_clipping(self):
         self.browser.page().runJavaScript(
             """
-              console.log($("div:contains('Clipping')"))
-                          $("div:contains('Clipping')").click()"""
+                $("div:contains('Clipping')").click()
+            """
         )
 
     def click_zoom(self):
         self.browser.page().runJavaScript(
             """
                   $(".bk.bk-btn.bk-btn-success").click()"""
-
         )
 
     def click_hover(self):
         self.browser.page().runJavaScript(
             """
-                  $(".bk.bk-btn.bk-btn-danger").click()"""
-
+                  $(".bk.bk-btn.bk-btn-danger").click()
+            """
         )

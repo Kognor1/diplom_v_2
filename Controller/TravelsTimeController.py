@@ -48,6 +48,13 @@ class TravelsTimeController(QObject):
             for row in godograf_data[cell_name]:
                 file.write(row)
 
+    def delete_godofraf(self, cell_name):
+        res = requests.get(
+            server_url + f"/delete_godograf/{cell_name}",
+        )
+        return res.json()
+
+
     def local_load_godograf(self, file_path):
         _, file_name = os.path.split(file_path)
         with open(file_path, "r") as file:

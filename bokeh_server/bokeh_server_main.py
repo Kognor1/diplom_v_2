@@ -20,7 +20,3 @@ def bokeh_main():
     with make_server("", 8000, app) as httpd:
         print("Serving on port 8000...")
         httpd.serve_forever()
-
-#
-# if __name__ == '__main__':
-#     bokeh_main()
